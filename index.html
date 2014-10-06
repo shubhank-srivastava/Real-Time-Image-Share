@@ -1,0 +1,79 @@
+<html ng-app="osapp">
+<head>
+    <title>
+         Real-Time ImageShare
+    </title>
+    <link rel="stylesheet" href="public/bootstrap.min.css"/>
+    <script src="public/angular.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="text/javascript">
+      angular.module('osapp',[]).controller('appController',['$scope','$http',function($scope,$http){
+            
+            $scope.upload = function(){
+            	var payload = new FormData();
+                payload.append('file',document.getElementById('filename').files[0]);
+                payload.append('expire',document.getElementById('expire').value);
+                payload.append('desc',document.getElementById('desc').value);
+            	$http.post('/upload',payload,{
+                            transformRequest: angular.identity,
+                            headers: {'Content-Type': undefined}
+                }).success(function(data){ 
+                    document.getElementById('filename').value='';
+                    document.getElementById('desc').value='';
+                }).error(function(err){
+                    $scope.result = err;
+                    $scope.resultClass = 'alert alert-danger'; 
+                    document.getElementById('filename').value='';
+                    document.getElementById('desc').value='';
+                });
+            };
+            
+            var socket = io.connect();
+            socket.on('message',function(message){
+                if(Object.keys(message).length==0)
+                    document.getElementById('img').innerHTML="No images to show";
+                else{
+                    document.getElementById('img').innerHTML="";
+                for(var i=0;i<Object.keys(message).length;i++){
+                    var key = Object.keys(message)[i];
+                    var desc = message[key].value;
+                    var time = Math.ceil((message[key].expire-Date.now())/1000);
+                    document.getElementById('img').innerHTML+='<div class="col-md-4 img-thumbnail pull-left"><h2 class="text-center">'+time+'</h2><img src="uploads/'+key+'" width="100%"/><h5 class="text-center">'+desc+'</h5></div>';
+                }
+                }   
+            }); 
+
+        }]);
+    </script>
+</head>
+<body data-ng-controller="appController" class="container">
+	<h1>Welcome to Real-Time Image Sharing</h1>
+	<h2>This is an operating systems project on implementation of web server and web cache.</h2>
+	<h3>To Do:</h3>
+	<ul>
+		<li>Choose an image.</li> 
+		<li>Set the visibility time for image.</li>
+        <li>Give a short description.</li>
+        <li>Click on upload.</li>
+	</ul>
+    <p class="{{resultClass}}">{{result}}</p>
+    <div class="row well">
+	<form enctype="multipart/form-data">
+        <input type="file" id="filename" class="col-md-4 pull-left"/>
+        <span class="col-md-2">
+        <select id="expire" class="pull-left">
+            <option value="15" selected="selected">15 sec</option>
+            <option value="30">30 sec</option>
+            <option value="45">45 sec</option>
+            <option value="60">60 sec</option>
+        </select>
+        </span>
+        <span class="col-md-4"><textarea id="desc"></textarea></span>
+        <span class="col-md-2"><input type="button" value="Upload" class="btn btn-info" data-ng-click="upload()"/></span>
+    </form>
+    </div>
+    <div>
+        <div id="img" class="col-md-12"></div>
+    </div>
+</body>
+</html>
